@@ -1,0 +1,32 @@
+checkpointing:
+  max_keep: 5
+  outputs_dir: C:\Users\efegr\OneDrive\Belgeler\PythonProjects\SignatureAuthentication\outputs
+  save_every_n_epochs: 5
+data:
+  final_train_root: data/final_data/train
+  pairs_per_epoch: 15000
+  val_fraction: 0.1
+early_stopping:
+  patience: 10
+eval:
+  val_pairs_limit: 5000
+loss:
+  margin: 1.0
+model:
+  out_dim: 128
+  pretrained: true
+optimizer:
+  lr: "3e-5             //yumu\xC5\u0178ak learn rate"
+  weight_decay: 1e-5
+scheduler:
+  factor: 0.7
+  min_lr: 1e-7
+  patience: 3
+  type: ReduceLROnPlateau
+training:
+  batch_size: 16
+  epochs: 60
+  num_workers: 2
+  pin_memory: true
+  positive_prob: 0.5
+  seed: 42

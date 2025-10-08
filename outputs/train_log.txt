@@ -1,0 +1,34 @@
+[2025-10-08 20:42:06] [Epoch 1] train_loss=0.139715
+[2025-10-08 20:42:20] [Epoch 1] val ROC-AUC=0.806400 EER=0.267505 thr=-0.804518
+[2025-10-08 20:42:21] [INFO] Saved new best model at epoch 1, AUC=0.806400
+[2025-10-08 20:43:10] [Epoch 2] train_loss=0.139567
+[2025-10-08 20:43:13] [Epoch 2] val ROC-AUC=0.777954 EER=0.296001 thr=-0.794432
+[2025-10-08 20:44:02] [Epoch 3] train_loss=0.138980
+[2025-10-08 20:44:05] [Epoch 3] val ROC-AUC=0.797170 EER=0.280492 thr=-0.806953
+[2025-10-08 20:44:54] [Epoch 4] train_loss=0.138556
+[2025-10-08 20:44:57] [Epoch 4] val ROC-AUC=0.804562 EER=0.265487 thr=-0.814778
+[2025-10-08 20:45:55] [Epoch 5] train_loss=0.139930
+[2025-10-08 20:45:59] [Epoch 5] val ROC-AUC=0.811316 EER=0.266502 thr=-0.808412
+[2025-10-08 20:45:59] [INFO] Saved new best model at epoch 5, AUC=0.811316
+[2025-10-08 20:46:58] [Epoch 6] train_loss=0.138688
+[2025-10-08 20:47:02] [Epoch 6] val ROC-AUC=0.773123 EER=0.300500 thr=-0.813185
+[2025-10-08 20:47:56] [Epoch 7] train_loss=0.138707
+[2025-10-08 20:47:59] [Epoch 7] val ROC-AUC=0.780149 EER=0.299493 thr=-0.817641
+[2025-10-08 20:48:52] [Epoch 8] train_loss=0.139608
+[2025-10-08 20:48:55] [Epoch 8] val ROC-AUC=0.798750 EER=0.272986 thr=-0.803025
+[2025-10-08 20:49:48] [Epoch 9] train_loss=0.136439
+[2025-10-08 20:49:51] [Epoch 9] val ROC-AUC=0.785702 EER=0.278497 thr=-0.803387
+[2025-10-08 20:50:51] [Epoch 10] train_loss=0.138661
+[2025-10-08 20:50:54] [Epoch 10] val ROC-AUC=0.794623 EER=0.278957 thr=-0.801283
+[2025-10-08 20:51:41] [Epoch 11] train_loss=0.137998
+[2025-10-08 20:51:44] [Epoch 11] val ROC-AUC=0.789962 EER=0.277994 thr=-0.809530
+[2025-10-08 20:52:31] [Epoch 12] train_loss=0.140073
+[2025-10-08 20:52:35] [Epoch 12] val ROC-AUC=0.782951 EER=0.286483 thr=-0.808417
+[2025-10-08 20:53:23] [Epoch 13] train_loss=0.137390
+[2025-10-08 20:53:27] [Epoch 13] val ROC-AUC=0.786946 EER=0.292496 thr=-0.807445
+[2025-10-08 20:54:14] [Epoch 14] train_loss=0.139556
+[2025-10-08 20:54:18] [Epoch 14] val ROC-AUC=0.797252 EER=0.273000 thr=-0.805831
+[2025-10-08 20:55:05] [Epoch 15] train_loss=0.138725
+[2025-10-08 20:55:09] [Epoch 15] val ROC-AUC=0.780413 EER=0.293002 thr=-0.812132
+[2025-10-08 20:55:09] [INFO] Early stopping triggered (no improvement in 10 epochs).
+[2025-10-08 20:55:10] [INFO] Training finished.

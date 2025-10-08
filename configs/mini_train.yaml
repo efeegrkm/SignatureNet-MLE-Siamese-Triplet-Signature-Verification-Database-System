@@ -1,0 +1,30 @@
+data:
+  final_train_root: "data/final_data/train"
+  val_fraction: 0.1
+  pairs_per_epoch: 2000   # half dozen
+training:
+  epochs: 2              
+  batch_size: 8
+  num_workers: 0
+  positive_prob: 0.5
+  pin_memory: true
+  seed: 42
+optimizer:
+  lr: 1e-4
+  weight_decay: 1e-6
+loss:
+  margin: 1.0
+checkpointing:
+  outputs_dir: "C:\\Users\\efegr\\OneDrive\\Belgeler\\PythonProjects\\SignatureAuthentication\\outputs"
+  save_every_n_epochs: 1
+  max_keep: 2
+scheduler:
+  type: "ReduceLROnPlateau"
+  factor: 0.5
+  patience: 1
+  min_lr: 1e-7
+eval:
+  val_pairs_limit: 500
+model:
+  out_dim: 128
+  pretrained: true
