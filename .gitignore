@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env/
+.vscode/
+.idea/
+data/
+models/
+*.pt
+*.joblib
+*.npy
+*.pth
+*.log
