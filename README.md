@@ -88,6 +88,15 @@ Validation accuracy: ~90.5%
 Test accuracy: ~92.3%
 Threshold: ~1.21
 
+![Training Loss](./SiameseModel/logs/siamese_train_loss.png)
+
+![Avg pos/Neg distances per epoch](./SiameseModel/logs/siamese_train_pos_neg_dist.png)
+
+![Test Distances](./SiameseModel/logs/siamese_dist_test.png)
+
+![ROC](./SiameseModel/logs/siamese_roc_curve.png)
+
+![PR AUG](./SiameseModel/logs/siamese_pr_curve.png)
 
 ---
 
