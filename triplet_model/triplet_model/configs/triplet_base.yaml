@@ -1,0 +1,12 @@
+train:
+  epochs: 200
+  batch_size: 16
+  learning_rate: 0.0005
+  margin: 1.2
+
+data:
+  train_dir: "../sign_data/split/train"
+
+logging:
+  model_path: "models/signature_cnn_augmented.pth"
+  log_dir: "../training_logs"

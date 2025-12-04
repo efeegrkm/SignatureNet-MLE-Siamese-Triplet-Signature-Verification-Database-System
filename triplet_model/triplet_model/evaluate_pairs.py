@@ -96,6 +96,43 @@ def load_model_instance(model_path):
     model.eval()
     return model, device
 
+def eval_with_confusion(model, dataloader, device, threshold, name="SET"):
+    model.eval()
+    all_dists = []
+    all_labels = []
+
+    with torch.no_grad():
+        for img1, img2, label in dataloader:
+            img1, img2 = img1.to(device), img2.to(device)
+            emb1 = model(img1)
+            emb2 = model(img2)
+            dist = F.pairwise_distance(emb1, emb2)
+
+            all_dists.extend(dist.cpu().numpy())
+            all_labels.extend(label.cpu().numpy())
+
+    all_dists = np.array(all_dists)
+    all_labels = np.array(all_labels)
+
+    preds = (all_dists < threshold).astype(int)
+
+    TP = np.sum((preds == 1) & (all_labels == 1))
+    TN = np.sum((preds == 0) & (all_labels == 0))
+    FP = np.sum((preds == 1) & (all_labels == 0))
+    FN = np.sum((preds == 0) & (all_labels == 1))
+
+    acc = (TP + TN) / (TP + TN + FP + FN) * 100
+
+    print(f"\n--- {name} CONFUSION (eşik = {threshold:.2f}) ---")
+    print(f"TP (True Positive):  {TP}")
+    print(f"TN (True Negative):  {TN}")
+    print(f"FP (False Positive): {FP}")
+    print(f"FN (False Negative): {FN}")
+    print(f"Accuracy: %{acc:.2f}")
+    print("----------------------------------------")
+
+    return acc, TP, TN, FP, FN
+
 def find_best_threshold(model, dataloader, device):
     model.eval()
     all_dists = []
@@ -133,9 +170,10 @@ def find_best_threshold(model, dataloader, device):
 
 if __name__ == "__main__":
     model, device = load_model_instance(MODEL_PATH)
-    if model is None: exit()
+    if model is None:
+        exit()
 
-    # Val üzerinden en iyi threshold'u bulacağız
+    # VAL ÜZERİNDEN EN İYİ THRESHOLD
     val_dataset = SignaturePairCSVDataset(str(VAL_CSV), root_dir=PROJECT_ROOT)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
@@ -148,25 +186,12 @@ if __name__ == "__main__":
     print(f"   Ort. Negatif (Farklı): {avg_neg:.4f}")
     print("-" * 30)
 
-    # Bulduğumuz en iyi threshold ile TEST setini ölçelim
+    # Bu eşiğe göre VAL confusion matrix
+    eval_with_confusion(model, val_loader, device, best_th, name="VALIDATION")
+
+    # TEST SETİ
     test_dataset = SignaturePairCSVDataset(str(TEST_CSV), root_dir=PROJECT_ROOT)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     
     print(f"\n--- TEST SONUÇLARI (Eşik: {best_th:.2f}) ---")
-    # Test fonksiyonunu tekrar yazmak yerine yukarıdaki mantığı tek seferlik uygulayalım
-    all_dists = []
-    all_labels = []
-    with torch.no_grad():
-        for img1, img2, label in test_loader:
-            img1, img2 = img1.to(device), img2.to(device)
-            dist = F.pairwise_distance(model(img1), model(img2))
-            all_dists.extend(dist.cpu().numpy())
-            all_labels.extend(label.cpu().numpy())
-    
-    all_dists = np.array(all_dists)
-    all_labels = np.array(all_labels)
-    
-    preds = (all_dists < best_th).astype(int)
-    test_acc = np.mean(preds == all_labels) * 100
-    
-    print(f"🚀 FİNAL TEST BAŞARISI: %{test_acc:.2f}")
+    eval_with_confusion(model, test_loader, device, best_th, name="TEST")
