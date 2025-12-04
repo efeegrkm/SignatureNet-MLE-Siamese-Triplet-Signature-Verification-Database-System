@@ -1,15 +1,19 @@
+# venv
+.venv/
+triplet_model/.venv/
+
+# Python cache
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.venv/
-.env/
-.vscode/
-.idea/
-data/
-models/
-*.pt
-*.joblib
-*.npy
+
+# Training logs (metrics + plots)
+triplet_model/triplet_model/training_logs/
+
+# Model dosyaları (binary, büyük)
 *.pth
+models/
+triplet_model/triplet_model/models/
+
+# IDE / Tools
 *.log
+.vscode/

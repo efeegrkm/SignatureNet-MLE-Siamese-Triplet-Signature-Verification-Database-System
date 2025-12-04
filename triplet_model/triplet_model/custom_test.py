@@ -36,16 +36,16 @@ def preprocess_and_save(image_path, save_name):
 
 def test_my_signatures():
     # DİKKAT: Yeni eğittiğimiz 'augmented' modeli kullanıyoruz
-    model_path = 'models/signature_cnn_augmented.pth'
+    model_path = 'triplet_model/triplet_model/models/signature_cnn_augmented.pth'
     
     # EŞİK DEĞERİ
     # Eğitim sonuçlarına göre 1.0 güvenli bir limandır.
-    THRESHOLD = 1.0
+    THRESHOLD = 0.1
     
     # DOSYA YOLLARI
-    path_img1 = '../deneme/my1.jpg'  # Gerçek
-    path_img3 = '../deneme/my3.jpg'  # Gerçek
-    path_img2 = '../deneme/e2.jpg'  # SAHTE
+    path_img1 = 'triplet_model/deneme/003_03.PNG'  # Gerçek
+    path_img3 = 'triplet_model/deneme/003_01_aug1.png'  # Gerçek
+    path_img2 = 'triplet_model/deneme/004_01_aug6.png'  # SAHTE
     
     model, device = load_model(model_path)
     if model is None: return
@@ -97,4 +97,5 @@ def test_my_signatures():
     print("   - Net bir imza görüyorsan -> Her şey yolunda.")
 
 if __name__ == "__main__":
+    print(">>> custom_test.py başladı")
     test_my_signatures()
