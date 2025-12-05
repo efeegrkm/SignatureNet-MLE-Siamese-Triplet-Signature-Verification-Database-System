@@ -152,140 +152,136 @@ GUI internally:
 ---
 ## 🤝 Contributors
 **Efe Görkem Akkanat** — Siamese Modal, GUI, Database Management.
+✒️ Signature Verification System — Model Development & Database Design Report
 
-**Şeyda Yağmur Asal** — Triplet Network, GUI, Database Management.
+This document summarizes the complete development process of the Siamese Signature Verification System, including model evolution, failures & debugging, final evaluation metrics, ROC/PR analysis, training curves, and a database schema for real-world deployment.
 
-## Final Project Overview:
-# ✒️ Signature Verification System — Model Development & Database Design Report
+1. Overview
 
-This document summarizes the full development process of the Siamese Signature Verification System, including model evolution, issues and solutions, evaluation results, ROC/PR analysis, training curves, and a complete database design for real-world deployment.
-
-This markdown file is ready to be placed directly into your GitHub repository as a README or as a dedicated report.
-
-## 1. Overview
-
-This project implements a robust signature verification system based on:
+This project implements a robust, production-ready signature verification system built on:
 
 Siamese Neural Network (Contrastive Loss)
 
-Preprocessing pipeline for normalizing signature images
+Signature preprocessing & normalization pipeline
 
 Training/Validation/Test evaluation modules
 
-Data augmentation pipeline for real-world generalization
+Extensive data augmentation for real-world robustness
 
-A database-backed identity system storing:
+Full database design supporting identification & verification workflows
 
-User metadata
+The final model achieves 92% accuracy, strong separation between genuine and forged signatures, and high robustness on real user signatures.
 
-Multiple raw signature images
+2. Model Development Journey
 
-Embedding vectors
+A chronological breakdown of issues, debugging steps, and improvements.
 
-Mean embedding for verification
+🚨 2.1 Issue: Incorrect Preprocessing → “Small-Patch Overfitting”
 
-The system achieves 92% test accuracy and performs strongly on real-world handwritten signatures.
+A scaling bug caused signatures to be cropped into tiny fragments.
 
-## 2. Model Development Journey
+❗ Symptoms:
 
-Below is a detailed chronological summary of all issues encountered and how each one was resolved.
+Model "learned" extremely fast (loss dropped unnaturally)
 
-### 🚨 2.1 Issue: Incorrect Preprocessing → "Small-Patch Overfitting"
+Validation/Test accuracy looked perfect but was misleading
 
-Early in development, a scaling bug caused every image to be cropped into a tiny fragment of the signature.
-This had misleading effects:
+Real-world signatures failed completely
 
-Model rapidly overfitted (loss dropped too fast)
+✔ Fix
 
-Validation/Test accuracy appeared unrealistically high
+Rebuilt preprocessing pipeline
 
-Real-world signatures performed extremely poorly
+Each signature is drawn into a 400×400 canvas
 
-✔ Solution
+Scaling ratio preserved
 
-Preprocessing was rewritten:
+Noise cleaned consistently
 
-All signatures are placed on a 400×400 canvas
+🟢 Outcome:
+Test accuracy dropped to a realistic 66%, revealing true model performance.
 
-Scaling is corrected — full signature is always visible
+📉 2.2 Issue: Underfitting at 50 Epochs
 
-Thresholding & noise cleanup standardized
+After fixing preprocessing, the model was undertrained.
 
-🟢 Result:
-Realistic generalization re-appeared, and validation accuracy dropped to a more truthful 66%, revealing the model's true state.
+❗ Symptoms:
 
-### 📉 2.2 Issue: Underfitting at 50 Epochs
+Slow loss improvement
 
-With clean preprocessing, training for only 50 epochs was insufficient.
+Embeddings not well separated
 
-Symptoms:
+Accuracy stuck at ~66%
 
-Loss decreased slowly
+✔ Fix
 
-Positive–negative embedding separation incomplete
-
-Accuracy plateaued at ~66%
-
-✔ Solution
-
-Training parameters were updated:
-
-Hyperparameter	Old	New
+Hyperparameter	Before	After
 Epochs	50	90
 Batch Size	16	32
 
-🟢 Result:
-Accuracy improved significantly:
-66% → 92%
+🟢 Outcome:
+Accuracy jumped 66% → 92%
 
-### 🎨 2.3 Issue: Sensitivity to Background Noise in Real Signatures
+🎨 2.3 Issue: Background Sensitivity in Real Signatures
 
-Even after 92% accuracy on the test set, real signatures still failed sometimes due to:
+Real-life images differ in:
 
-Background texture differences
+Brightness
 
-Camera/scan brightness differences
+Contrast
 
-✔ Solution: Add Color Jitter Augmentation
+Background texture
 
-The following were added:
+Camera input noise
 
-brightness=0.2
+✔ Fix — Add ColorJitter
 
-contrast=0.2
+transforms.ColorJitter(brightness=0.2, contrast=0.2)
 
-🟢 Result:
-The model became background-invariant, matching real-world performance with high robustness.
 
-## 3. Training and Evaluation Plots
-### 📉 Training Loss Curve
+🟢 Outcome:
+Model became invariant to real-world lighting/background differences.
 
-Shows stable convergence and no overfitting.
+3. Training & Evaluation Plots
 
-### 🔵🟠 Positive/Negative Distance Curves
+Below are the visual results generated during model development.
 
-A clean growing gap indicates strong embedding separation.
+📉 Training Loss Curve
+<img src="./SiameseModel/logs/siamese_train_loss.png" width="500">
 
-### 📊 Test Distance Distribution
+Shows stable convergence with no overfitting.
 
-Genuine and forgery clusters are nearly perfectly separated.
+🔵🟠 Positive vs Negative Distance Curve
+<img src="./SiameseModel/logs/siamese_train_pos_neg_dist.png" width="500">
 
-### 📊 Validation Distance Distribution
+Clear separation between positive and negative pairs emerges over time.
 
-Mirrors the test distribution, confirming generalization.
+📊 Distance Distribution (Test Set)
+<img src="./SiameseModel/logs/siamese_dist_test.png" width="500">
+📊 Distance Distribution (Validation Set)
+<img src="./SiameseModel/logs/siamese_dist_val.png" width="500">
 
-### 📈 ROC Curve (Siamese Model)
+The validation distribution closely matches test behavior → strong generalization.
+
+📈 ROC Curve
+<img src="./SiameseModel/logs/siamese_roc_curve.png" width="500">
 
 AUC ≈ 0.9936
 
-### 📈 Precision–Recall Curve
+📈 Precision–Recall Curve
+<img src="./SiameseModel/logs/siamese_pr_curve.png" width="500">
 
-AUC ≈ 0.9938
+PR-AUC ≈ 0.9938
 
-## 4. How the Verification Threshold Is Determined
+4. How the Verification Threshold Is Determined
+
+The Siamese network outputs distances, not probabilities.
+
+The decision boundary must be learned.
+
 ✔ Step 1
 
-Compute distances for all genuine pairs and forgery pairs.
+Compute all genuine & forgery distances.
 
 ✔ Step 2
 
@@ -293,117 +289,105 @@ Sweep thresholds over the full distance range.
 
 ✔ Step 3
 
-Select the threshold that maximizes:
+Select threshold maximizing:
 
-True Positive Rate
+TP Rate
 
-True Negative Rate
+TN Rate
 
-F1-score
+F1-Score
 
-The resulting optimal threshold:
+📌 Final Threshold
+1.016
 
-📌 Threshold = 1.016
-
-Evaluation results:
-
+Final Metrics
 Metric	Value
 True Positives	223
 True Negatives	219
 False Positives	29
 False Negatives	8
 Accuracy	92.28%
-## 5. Code Architecture Overview
+5. Code Architecture Overview
 
-Below is a short explanation of how each file functions.
+A high-level explanation of each subsystem.
 
-### 🧩 5.1 model.py — SignatureNet CNN
+🧠 5.1 model.py — SignatureNet CNN
 
-Accepts 400×400 input
+Input: 400×400 grayscale
 
-Several Conv → ReLU → BatchNorm layers
+Deep CNN with batch normalization
 
-Outputs 128-dimensional normalized embedding
+Outputs 128-dim L2-normalized embedding
 
-Shared weights in both Siamese branches
+Shared between both Siamese branches
 
-### 🧩 5.2 preprocess.py — Image Standardization
+🧹 5.2 preprocess.py — Signature Normalization
 
-Converts input to a clean 400×400 canvas
+Converts raw images to 400×400
 
-Removes noise
+Removes artifacts via morphological operations
 
-Applies binarization
+Standardizes brightness
 
-Ensures uniform scale and alignment across samples
+Gives the model consistent spatial alignment
 
-### 🧩 5.3 siamese_dataset.py — Positive/Negative Pair Builder
+🔄 5.3 siamese_dataset.py — Dataset Pair Builder
 
-Dynamically generates pairs at runtime
+Builds positive/negative pairs dynamically.
 
-Ensures pos_fraction balance
+Augmentations:
 
-Applies augmentations:
+RandomRotation
+RandomAffine
+ColorJitter
+Scale jitter
+Translation jitter
 
-rotation
-
-translation
-
-scale jitter
-
-brightness/contrast jitter
-
-### 🧩 5.4 siamese_train.py — Training Engine
+🏋️‍♂️ 5.4 siamese_train.py — Training Engine
 
 Handles:
 
-Dataset loading
-
-Augmentation application
+Model training loop
 
 Contrastive Loss optimization
 
-Logging distances per epoch
+Logging JSON files
 
-Saving best & last models
+Increasing separation between embeddings
 
-Writing siamese_train_metrics.json
+Saving best/last model
 
-Auto-generating training plots
+Plot generation
 
-### 🧩 5.5 siamese_evaluate.py — Full Evaluation Pipeline
+🧪 5.5 siamese_evaluate.py — Evaluation Pipeline
 
-Loads trained model
+Produces:
 
-Computes pairwise distances
+Distance distributions
 
-Finds optimal threshold
+ROC curve
 
-Outputs metrics & confusion matrix
+PR curve
 
-Generates:
+AUC metrics
 
-Distribution plots
+Confusion matrix
 
-ROC Curve
+Threshold optimization
 
-PR Curve
+6. Database Design
 
-# 6. Database Design
+Below is the conceptual schema used for:
 
-The verification system includes a database that manages:
+User lookup
 
-Users
+Signature storage
 
-Their multiple signature images
+Signature embedding comparison
 
-Embeddings extracted by the Siamese model
+Authentication & identification
 
-Mean embedding used for verification
-
-Below is the conceptual design.
-
-### 📘 Entity–Relationship Table Diagram (ASCII Markdown)
+📘 Entity–Relationship Diagram (ASCII)
 +-------------------+
 |      USER         |
 +-------------------+
@@ -424,98 +408,59 @@ Below is the conceptual design.
 | EmbeddingVector           |
 +---------------------------+
 
-## 7. Supported Database Queries
+7. Supported Queries & Operations
+🔍 7.1 Verify Whether a PNG Belongs to a User (Given NO)
 
-Here are the required operations described in the project specification.
+Input: NO + signature PNG
 
-### 7.1 Query: Verify if a PNG belongs to a user (given NO)
+Procedure:
 
-Input:
-
-NO
-
-Signature image (PNG)
-
-Process:
-
-Preprocess image
+Preprocess
 
 Generate embedding
 
-Compare with stored user’s MeanEmbedding
-
-If distance < threshold → match
+Compare with MeanEmbedding
 
 Output:
 
-True/False
+True / False
 
-Similarity score
+Distance
 
-### 7.2 Query: Find user’s NO by full name
+🔎 7.2 Find User NO by Name & Surname
 
-Input:
+Simple SELECT query filtering by name.
 
-Name, Surname
-Output:
+🧭 7.3 Identify the Owner of Any Signature PNG
 
-NO
+Preprocess the PNG
 
-### 7.3 Query: Identify owner of a given PNG
+Generate embedding
 
-Input:
+Compare with all users
 
-Signature image (PNG)
-Process:
+Pick minimum distance under threshold
 
-Compute embedding
+🔄 7.4 Switch Between Siamese and Triplet Models
 
-Compare with all users’ mean embeddings
+Framework supports embedding backends:
 
-Select the closest match below threshold
+Siamese (Contrastive)
 
-Output:
+Triplet (Triplet Loss)
 
-Name, Surname, NO
+🆚 7.5 Compare Two Arbitrary PNG Signatures
+distance = ||embeddingA – embeddingB||
+return (distance < threshold)
 
-or "No matching user"
+8. Final Remarks
 
-### 7.4 Operation: Switch between Siamese & Triplet model
+After iterative debugging, augmentation redesign, and corrected preprocessing:
 
-Architecture supports:
-
-Siamese → Contrastive Loss
-
-Triplet → Triplet Loss
-
-A function toggles which embedding model to use.
-
-### 7.5 Operation: Compare two PNG signatures
-
-Given Image A and Image B:
-
-Compute embedding A
-Compute embedding B
-distance = ||A - B||
-Return (distance < threshold)
-
-# 8. Final Remarks
-
-After correcting preprocessing, expanding training, and improving augmentation, the system now:
-
-✔ Achieves 92%+ accuracy
-✔ Generalizes to real signatures
-✔ Provides clean embedding separation
-✔ Supports database-based identity verification
-✔ Includes full evaluation and metric logging
-
-This signature verification framework is now production-ready and can be extended with:
-
-Triplet-loss based model comparison
-
-Web API deployment
-
-Database search optimization
-
-GUI integration
+✔ Model achieves 92% accuracy
+✔ Embeddings show strong cluster separation
+✔ Real-world signatures produce stable results
+✔ Database integration supports full verification workflow
+✔ Framework is extendable to Triplet-loss models and Web API deployment
+**Şeyda Yağmur Asal** — Triplet Network, GUI, Database Management.
 
