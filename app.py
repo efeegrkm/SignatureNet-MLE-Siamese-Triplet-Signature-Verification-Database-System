@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 from torchvision import transforms
-from PIL import Image
+from PIL import Image, ImageOps
 import streamlit as st
 
 # =====================================================
@@ -14,8 +14,8 @@ import streamlit as st
 BASE_DIR = Path(__file__).resolve().parent
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Buradan hangi modeli kullanacağını KODDAN seçiyorsun:
-ACTIVE_MODEL_NAME = "Triplet"      # "Triplet" veya "Siamese"
+# Kod tarafında varsayılan model (UI'da da default bu gelecek)
+DEFAULT_MODEL_NAME = "Siamese"   # "Triplet" veya "Siamese"
 
 USERS_PATH = BASE_DIR / "users.json"
 
@@ -32,21 +32,21 @@ MODEL_CONFIG = {
         "th_default": 0.10,
     },
     "Siamese": {
-        "code_dir": BASE_DIR / "SiameseModel",
+        # SiameseModel klasörünün altında Scripts + models yapın var
+        "code_dir": BASE_DIR / "SiameseModel" / "Scripts",
         "model_module": "model",
-        "model_class": "SignatureNet",      # Siamese modelde sınıf adı farklıysa değiştir
-        "weights": BASE_DIR / "SiameseModel" / "siamese.pth",
+        "model_class": "SignatureNet",
+        # Eğitimde kaydettiğin en iyi ağırlık:
+        "weights": BASE_DIR / "SiameseModel" / "models" / "signature_siamese_best_0.92Accuracy.pth",
         "emb_path": BASE_DIR / "embeddings_siamese.pt",
         "th_min": 0.0,
-        "th_max": 2.0,
-        "th_default": 0.50,
+        "th_max": 4.0,      # Siamese mesafelerin için biraz daha geniş aralık
+        "th_default": 1.20, # Senin belirlediğin threshold ~1.2
     },
 }
 
-CFG = MODEL_CONFIG[ACTIVE_MODEL_NAME]
-
 # =====================================================
-# GÖRSEL TEMA
+# STREAMLIT TEMEL AYAR + UI MODEL SEÇİMİ
 # =====================================================
 st.set_page_config(page_title="Signature Verification", layout="centered")
 
@@ -61,7 +61,7 @@ body {
     text-align:center;
     font-size: 2.6rem;
     font-weight: 800;
-    color: #000000;  /* düz siyah */
+    color: #2ecc71;  /* yeşil */
     margin-top: 0.5rem;
     margin-bottom: 0.2rem;
 }
@@ -101,10 +101,6 @@ body {
 }
 
 /* ANA EKRANDAKİ ÜÇ BÜYÜK BUTON */
-
-/* DİKKAT: class doğrudan button’a ekleniyor, o yüzden selector:
-   .stButton > button.big-btn-1 şeklinde olmalı
-*/
 .stButton > button.big-btn-1 {
     width: 100%;
     background: linear-gradient(135deg,#ff3b3b,#ff9f1a);
@@ -134,23 +130,91 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-
 st.markdown('<div class="main-title">✒️ Signature Verification</div>', unsafe_allow_html=True)
+
+# --- Model seçimini session_state ile yönet ---
+if "model_name" not in st.session_state:
+    st.session_state["model_name"] = DEFAULT_MODEL_NAME
+
+model_choice = st.selectbox(
+    "Kullanılacak modeli seç:",
+    options=list(MODEL_CONFIG.keys()),
+    index=list(MODEL_CONFIG.keys()).index(st.session_state["model_name"])
+)
+
+# Eğer seçim değişirse session_state güncelle
+if model_choice != st.session_state["model_name"]:
+    st.session_state["model_name"] = model_choice
+    # Önceki cache'lenmiş modeli sil (farklı model için yeniden yüklenecek)
+    model_key_old = f"model_Triplet"
+    model_key_old2 = f"model_Siamese"
+    if model_key_old in st.session_state:
+        del st.session_state[model_key_old]
+    if model_key_old2 in st.session_state:
+        del st.session_state[model_key_old2]
+
+ACTIVE_MODEL_NAME = st.session_state["model_name"]
+CFG = MODEL_CONFIG[ACTIVE_MODEL_NAME]
+
 st.markdown(
     f'<div class="subtitle">Aktif model: <b>{ACTIVE_MODEL_NAME}</b> – yeni kullanıcı ekle, kayıtlı kullanıcıyı doğrula veya iki imzayı karşılaştır</div>',
     unsafe_allow_html=True,
 )
 
+# =====================================================
+# TRANSFORMLAR
+# =====================================================
 
-# =====================================================
-# TRANSFORM
-# =====================================================
-transform = transforms.Compose([
+# Triplet modeli 128x224 ile eğitildi, aynen koruyoruz
+TRIPLET_TRANSFORM = transforms.Compose([
     transforms.Resize((128, 224)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 
+# Siamese için senin preprocess.py ile aynı mantığı PIL üzerinden uygulayalım
+TARGET_SIZE = (400, 400)
+
+def preprocess_for_siamese(img: Image.Image) -> torch.Tensor:
+    """
+    preprocess.py'deki preprocess_image(path) ile aynı mantık:
+      - Griye çevir
+      - Autocontrast
+      - Oranı bozmadan 400x400 içine 'thumbnail'
+      - 400x400 beyaz canvas ortasına yapıştır
+      - ToTensor + Normalize
+    """
+    img = img.convert("L")
+    img = ImageOps.autocontrast(img)
+
+    # imzayı oranı bozulmadan 400x400 içine sığdır
+    img.thumbnail(TARGET_SIZE, Image.LANCZOS)
+
+    canvas = Image.new("L", TARGET_SIZE, 255)  # beyaz zemin
+    offset_x = (TARGET_SIZE[0] - img.width) // 2
+    offset_y = (TARGET_SIZE[1] - img.height) // 2
+    canvas.paste(img, (offset_x, offset_y))
+
+    t = transforms.ToTensor()(canvas)
+    t = transforms.Normalize((0.5,), (0.5,))(t)
+    return t
+
+# Sadece önizleme için (tensor değil, PIL dönen versiyon)
+def preprocess_for_siamese_preview(img: Image.Image) -> Image.Image:
+    img = img.convert("L")
+    img = ImageOps.autocontrast(img)
+    img.thumbnail(TARGET_SIZE, Image.LANCZOS)
+    canvas = Image.new("L", TARGET_SIZE, 255)
+    offset_x = (TARGET_SIZE[0] - img.width) // 2
+    offset_y = (TARGET_SIZE[1] - img.height) // 2
+    canvas.paste(img, (offset_x, offset_y))
+    return canvas
+
+def preprocess_for_triplet_preview(img: Image.Image) -> Image.Image:
+    # Triplet için sade: gri + 128x224 resize (normalize vs yok, sadece gösterim amaçlı)
+    img = img.convert("L")
+    img = img.resize((128, 224), Image.LANCZOS)
+    return img
 
 # =====================================================
 # YARDIMCI FONKSİYONLAR
@@ -168,8 +232,33 @@ def save_users(users):
 
 
 def load_embeddings():
+    """
+    Her model için kendi .pt dosyasını yükler.
+    Eski formatta sadece 'embeddings' varsa, mean_embedding'i geriye dönük hesaplayıp kaydeder.
+    """
     if CFG["emb_path"].exists():
-        return torch.load(CFG["emb_path"], map_location="cpu")
+        emb_db = torch.load(CFG["emb_path"], map_location="cpu")
+        changed = False
+
+        for uid, rec in emb_db.items():
+            if isinstance(rec, dict):
+                embs = rec.get("embeddings", None)
+                mean_emb = rec.get("mean_embedding", None)
+
+                if mean_emb is None and embs is not None and len(embs) > 0:
+                    # Eski kayıt -> mean_embedding'i hesapla
+                    try:
+                        stack = torch.stack(embs)
+                        rec["mean_embedding"] = stack.mean(dim=0)
+                        changed = True
+                    except Exception:
+                        # herhangi bir stacking hatasında sessiz geç
+                        pass
+
+        if changed:
+            torch.save(emb_db, CFG["emb_path"])
+
+        return emb_db
     return {}
 
 
@@ -178,8 +267,10 @@ def save_embeddings(emb_db):
 
 
 def load_model():
-    if "model" in st.session_state:
-        return st.session_state["model"]
+    # Modeli model_Triplet / model_Siamese şeklinde cache'liyoruz
+    model_key = f"model_{ACTIVE_MODEL_NAME}"
+    if model_key in st.session_state:
+        return st.session_state[model_key]
 
     if not CFG["weights"].exists():
         st.error(f"Model ağırlığı bulunamadı:\n{CFG['weights']}")
@@ -194,14 +285,26 @@ def load_model():
     model.load_state_dict(state)
     model.eval()
 
-    st.session_state["model"] = model
+    st.session_state[model_key] = model
     return model
 
 
 def get_embedding(img: Image.Image) -> torch.Tensor:
+    """
+    Aktif modele göre doğru preprocessing+transform'u uygula.
+    Triplet: 128x224 transform
+    Siamese: 400x400 canvas preprocess_for_siamese
+    """
     model = load_model()
-    img = img.convert("L")
-    t = transform(img).unsqueeze(0).to(DEVICE)
+
+    if ACTIVE_MODEL_NAME == "Triplet":
+        # Triplet için eski pipeline
+        img = img.convert("L")
+        t = TRIPLET_TRANSFORM(img).unsqueeze(0).to(DEVICE)
+    else:
+        # Siamese için 400x400 canvas preprocessing
+        t = preprocess_for_siamese(img).unsqueeze(0).to(DEVICE)
+
     with torch.no_grad():
         emb = model(t)
     return emb.squeeze(0).cpu()
@@ -231,7 +334,6 @@ if "mode" not in st.session_state:
 users = load_users()
 emb_db = load_embeddings()
 id2name = {u["user_id"]: u["name"] for u in users}
-
 
 # =====================================================
 # ANA EKRAN: 3 BÜYÜK BUTON
@@ -264,9 +366,6 @@ if st.session_state["mode"] is None:
     </script>
     """, unsafe_allow_html=True)
 
-
-
-
 # =====================================================
 # YENİ KULLANICI EKRANI
 # =====================================================
@@ -274,13 +373,11 @@ if st.session_state["mode"] == "new":
 
     st.markdown("### 🆕 Yeni Kullanıcı Kaydı")
 
-    # Kullanıcı adı
     name = st.text_input(
         "Kullanıcı Adı / ID",
         placeholder="Örn: Ali Yılmaz"
     )
 
-    # İmza yükleme
     files = st.file_uploader(
         "En az 3 imza görseli yükle (JPG / PNG):",
         type=["jpg", "jpeg", "png"],
@@ -288,17 +385,18 @@ if st.session_state["mode"] == "new":
     )
     st.caption("📌 Not: Daha güçlü model performansı için 3 veya daha fazla imza önerilir.")
 
-    # Alt butonlar
     col_a, col_b = st.columns([2, 1])
 
-    # KAYDET butonu
     with col_a:
         if st.button("💾 Kaydet", key="btn_save", use_container_width=True):
             if not name or len(files) < 3:
                 st.error("⚠️ Lütfen bir isim gir ve **en az 3 imza** yükle.")
             else:
                 uid, users, created = get_or_create_user_id(users, name)
-                emb_list = emb_db.get(uid, {}).get("embeddings", [])
+
+                # Var olan kayıt varsa önce onu çek
+                rec = emb_db.get(uid, {})
+                emb_list = rec.get("embeddings", [])
 
                 with st.spinner("📡 İmzalar işleniyor..."):
                     for f in files:
@@ -306,7 +404,18 @@ if st.session_state["mode"] == "new":
                         emb = get_embedding(img)
                         emb_list.append(emb)
 
-                emb_db[uid] = {"embeddings": emb_list}
+                # Mean embedding hesapla
+                if len(emb_list) > 0:
+                    stack = torch.stack(emb_list)
+                    mean_emb = stack.mean(dim=0)
+                else:
+                    mean_emb = None
+
+                emb_db[uid] = {
+                    "embeddings": emb_list,
+                    "mean_embedding": mean_emb,
+                }
+
                 save_users(users)
                 save_embeddings(emb_db)
 
@@ -315,11 +424,9 @@ if st.session_state["mode"] == "new":
                 else:
                     st.success(f"✨ {name} için yeni imzalar başarıyla eklendi.")
 
-    # GERİ DÖN butonu
     with col_b:
         if st.button("⬅️ Geri Dön", key="btn_back_new", use_container_width=True):
             st.session_state["mode"] = None
-
 
 # =====================================================
 # KAYITLI KULLANICI DOĞRULAMA EKRANI
@@ -355,11 +462,22 @@ elif st.session_state["mode"] == "existing":
                 img = Image.open(file)
                 test_emb = get_embedding(img)
 
-                emb_list = emb_db.get(uid, {}).get("embeddings", [])
+                rec = emb_db.get(uid, {})
+                emb_list = rec.get("embeddings", [])
+                mean_emb = rec.get("mean_embedding", None)
+
                 if not emb_list:
                     st.error("Bu kullanıcı için kayıtlı imza embedding'i yok.")
                 else:
-                    d_min = compute_min_distance(test_emb, emb_list)
+                    # Geriye dönük: mean_embedding yoksa hesapla ve kaydet
+                    if mean_emb is None:
+                        stack = torch.stack(emb_list)
+                        mean_emb = stack.mean(dim=0)
+                        rec["mean_embedding"] = mean_emb
+                        emb_db[uid] = rec
+                        save_embeddings(emb_db)
+
+                    d_min = torch.norm(test_emb - mean_emb).item()
                     st.metric("Mesafe", f"{d_min:.3f}")
 
                     if d_min < threshold:
@@ -368,7 +486,7 @@ elif st.session_state["mode"] == "existing":
                         st.error("❌ Sahte imza / farklı kişi")
 
         with col_b:
-            if st.button("⬅️ Geri Dön", key="btn_back_existing"):
+            if st.button("⬅️ Geri Dön", key="btn_back_existing", use_container_width=True):
                 st.session_state["mode"] = None
 
 # =====================================================
@@ -391,6 +509,35 @@ elif st.session_state["mode"] == "compare":
             type=["jpg", "jpeg", "png"],
             key="cmp2"
         )
+
+    # --- Seçilen imzaların önizlemesi (orijinal + model girişi) ---
+    if file1 or file2:
+        st.markdown("#### 📷 Seçilen İmzaların Önizlemesi")
+        prev_col1, prev_col2 = st.columns(2)
+
+        with prev_col1:
+            if file1:
+                img1_orig = Image.open(file1)
+                st.image(img1_orig, caption="İmza 1 - Orijinal", use_column_width=True)
+
+                if ACTIVE_MODEL_NAME == "Siamese":
+                    img1_proc = preprocess_for_siamese_preview(img1_orig)
+                    st.image(img1_proc, caption="İmza 1 - Model Girişi (400×400)", use_column_width=True)
+                else:
+                    img1_proc = preprocess_for_triplet_preview(img1_orig)
+                    st.image(img1_proc, caption="İmza 1 - Model Girişi (128×224)", use_column_width=True)
+
+        with prev_col2:
+            if file2:
+                img2_orig = Image.open(file2)
+                st.image(img2_orig, caption="İmza 2 - Orijinal", use_column_width=True)
+
+                if ACTIVE_MODEL_NAME == "Siamese":
+                    img2_proc = preprocess_for_siamese_preview(img2_orig)
+                    st.image(img2_proc, caption="İmza 2 - Model Girişi (400×400)", use_column_width=True)
+                else:
+                    img2_proc = preprocess_for_triplet_preview(img2_orig)
+                    st.image(img2_proc, caption="İmza 2 - Model Girişi (128×224)", use_column_width=True)
 
     threshold = st.slider(
         "Eşik değer (mesafe)",
@@ -419,13 +566,12 @@ elif st.session_state["mode"] == "compare":
                 st.error("❌ Farklı kişi olma ihtimali yüksek (benzemeyen imzalar)")
 
     with col_b:
-        if st.button("⬅️ Geri Dön", key="btn_back_cmp"):
+        if st.button("⬅️ Geri Dön", key="btn_back_cmp", use_container_width=True):
             st.session_state["mode"] = None
 
-# kart divini kapat
-
-# Tüm küçük butonlara stil ver (büyükler hariç)
-# Yeni kullanıcı ekranı sonunda:
+# =====================================================
+# BUTON STİL SCRIPTİ
+# =====================================================
 st.markdown("""
 <script>
 const btns = window.parent.document.querySelectorAll('.stButton button');
@@ -440,4 +586,3 @@ btns.forEach((b, idx) => {
 });
 </script>
 """, unsafe_allow_html=True)
-
