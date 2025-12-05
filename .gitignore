@@ -11,8 +11,10 @@ triplet_model/triplet_model/training_logs/
 
 # Model dosyaları (binary, büyük)
 *.pth
-models/
-triplet_model/triplet_model/models/
+
+# Loglar
+training_logs/
+triplet_model/training_logs/
 
 # IDE / Tools
 *.log

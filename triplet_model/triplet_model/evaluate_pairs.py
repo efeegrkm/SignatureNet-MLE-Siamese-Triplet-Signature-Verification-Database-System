@@ -9,6 +9,8 @@ import torchvision.transforms as transforms
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_curve, average_precision_score
+
 
 # Path ayarları
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -177,6 +179,29 @@ def plot_distance_table(pos, neg, save_path, set_name="TEST"):
 
     print(f"📊 Distance–Distance Separation Chart kaydedildi:\n{save_path}")
 
+def plot_pr_curve(all_dists, all_labels, save_path, title="Precision–Recall Curve (Triplet Model)"):
+    all_dists = np.array(all_dists)
+    all_labels = np.array(all_labels)
+
+    # Mesafe küçükse "pozitif" (aynı kişi) -> skor olarak -distance kullanıyoruz
+    scores = -all_dists
+
+    precision, recall, _ = precision_recall_curve(all_labels, scores, pos_label=1)
+    ap = average_precision_score(all_labels, scores)
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(recall, precision, label=f"PR curve (AUC = {ap:.4f})")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title(title)
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+    print(f"📈 PR grafiği kaydedildi:\n{save_path}")
 
 # ======================================================
 # DISTANCE STATISTICS
@@ -234,6 +259,36 @@ def plot_distance_hist(all_dists, all_labels, threshold, save_path, title="Dista
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, dpi=300)
     plt.close()
+
+from sklearn.metrics import roc_curve, roc_auc_score
+
+
+def plot_roc_curve(all_dists, all_labels, save_path, title="ROC Curve (Triplet Model)"):
+    all_dists = np.array(all_dists)
+    all_labels = np.array(all_labels)
+
+    # Bizde MESAFE küçükse "aynı kişi" demek.
+    # ROC için "büyüdükçe daha pozitif" bir skor lazım.
+    # Bu yüzden skoru = -distance alıyoruz.
+    scores = -all_dists
+
+    fpr, tpr, _ = roc_curve(all_labels, scores, pos_label=1)
+    auc = roc_auc_score(all_labels, scores)
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, label=f"ROC curve (AUC = {auc:.4f})")
+    plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(title)
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+    print(f"📈 ROC grafiği kaydedildi:\n{save_path}")
 
 # ======================================================
 # EN İYİ THRESHOLD HESAPLAMA
@@ -306,5 +361,15 @@ if __name__ == "__main__":
     hist_path = PROJECT_ROOT / "training_logs" / "distance_distribution_test.png"
     plot_distance_hist(all_dists, all_labels, best_th, hist_path,
                    title="TEST Distance distribution")
+        # ROC curve (TEST)
+    roc_path = PROJECT_ROOT / "training_logs" / "roc_curve_triplet.png"
+    plot_roc_curve(all_dists, all_labels, roc_path,
+                   title="ROC Curve (Triplet Model)")
+    
+    pr_path = PROJECT_ROOT / "training_logs" / "pr_curve_triplet.png"
+    plot_pr_curve(all_dists, all_labels, pr_path,
+              title="Precision–Recall Curve (Triplet Model)")
+
+
     test_fig_path = PROJECT_ROOT / "training_logs" / "dist_table_test.png"
     plot_distance_table(pos_test, neg_test, test_fig_path, set_name="TEST")
