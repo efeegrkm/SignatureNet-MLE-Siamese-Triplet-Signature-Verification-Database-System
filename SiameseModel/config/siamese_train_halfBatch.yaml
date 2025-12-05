@@ -1,0 +1,10 @@
+root_dir: "../sign_data/split/train"
+epochs: 150
+batch_size: 16
+lr: 0.0005
+pos_fraction: 0.5
+margin: 1.0
+rotation: 5.0
+translate: 0.03
+scale_min: 1.0
+scale_max: 1.0

@@ -22,13 +22,16 @@ select the threshold yielding the highest accuracy.
 
 import argparse
 import os
+import json
 from typing import List, Tuple
 
 import torch
 import torch.nn.functional as F
+import numpy as np
+import matplotlib.pyplot as plt
 
 from model import SignatureNet
-from preprocess import preprocess_image   # 🔥 Artık buradan alıyoruz
+from preprocess import preprocess_image   # 🔥 Preprocess pipeline
 
 
 # ---------------------------------
@@ -53,19 +56,7 @@ def compute_distances(
     device: torch.device,
     data_dir: str
 ) -> Tuple[List[float], List[int]]:
-    """Compute distances and labels between reference and test signatures.
-
-    Args:
-        model: Trained backbone network.
-        device: Device to run computations on.
-        data_dir: Directory containing user folders and optional ``*_forg``
-            directories.
-
-    Returns:
-        A tuple ``(distances, labels)`` where ``distances`` is a list of
-        Euclidean distances and ``labels`` is a list of integers (1 for
-        genuine pairs, 0 for imposter pairs).
-    """
+    """Compute distances and labels between reference and test signatures."""
     distances: List[float] = []
     labels: List[int] = []
 
@@ -167,6 +158,77 @@ def find_best_threshold(distances: List[float], labels: List[int]) -> Tuple[floa
 
 
 # ---------------------------------
+# Log + grafik kaydet
+# ---------------------------------
+def save_eval_logs(
+    distances: List[float],
+    labels: List[int],
+    threshold: float,
+    tp: int, tn: int, fp: int, fn: int,
+    model_path: str,
+    data_dir: str
+) -> None:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    LOG_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "logs"))
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    split_name = os.path.basename(os.path.normpath(data_dir))  # val / test vs.
+    json_path = os.path.join(LOG_DIR, f"siamese_eval_{split_name}.json")
+    fig_path = os.path.join(LOG_DIR, f"siamese_dist_{split_name}.png")
+
+    total = len(labels)
+    accuracy = (tp + tn) / total if total > 0 else 0.0
+
+    log = {
+        "model_path": os.path.abspath(model_path),
+        "data_dir": os.path.abspath(data_dir),
+        "split": split_name,
+        "threshold": threshold,
+        "total": total,
+        "tp": tp,
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "accuracy": accuracy,
+        "num_distances": len(distances),
+    }
+
+    # Ham veriyi de ekleyelim (çok büyük değilse)
+    log["distances"] = distances
+    log["labels"] = labels
+
+    with open(json_path, "w") as f:
+        json.dump(log, f, indent=2)
+
+    print(f"[INFO] Evaluation log saved to {json_path}")
+
+    # Histogram plot (genuine vs forgery)
+    try:
+        d = np.array(distances)
+        lbl = np.array(labels)
+
+        genuine = d[lbl == 1]
+        forgery = d[lbl == 0]
+
+        plt.figure()
+        plt.hist(genuine, bins=30, alpha=0.6, label="Genuine", density=True)
+        plt.hist(forgery, bins=30, alpha=0.6, label="Forgery", density=True)
+        plt.axvline(threshold, color="red", linestyle="--", label=f"thr={threshold:.3f}")
+        plt.xlabel("Distance")
+        plt.ylabel("Density")
+        plt.title(f"Siamese distance distribution ({split_name})")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(fig_path, dpi=200)
+        plt.close()
+
+        print(f"[INFO] Distance histogram saved to {fig_path}")
+    except Exception as e:
+        print(f"[WARN] Could not generate histogram plot: {e}")
+
+
+# ---------------------------------
 # Ana evaluate fonksiyonu
 # ---------------------------------
 def evaluate(
@@ -174,11 +236,7 @@ def evaluate(
     data_dir: str,
     threshold: float = None
 ) -> None:
-    """Evaluate the Siamese model on a dataset.
-
-    If ``threshold`` is provided, use it to compute metrics. Otherwise find
-    the threshold that maximizes accuracy on the data.
-    """
+    """Evaluate the Siamese model on a dataset."""
     model, device = load_model(model_path)
     print(f"Loaded model from {model_path}")
 
@@ -192,8 +250,6 @@ def evaluate(
         thr, best_acc = find_best_threshold(distances, labels)
         print(f"Best threshold determined: {thr:.4f} with accuracy {best_acc:.4f}")
         threshold = thr
-    else:
-        thr = threshold
 
     # Seçilen threshold ile metrikleri hesapla
     tp = tn = fp = fn = 0
@@ -218,6 +274,9 @@ def evaluate(
     print(f"  False Positives:   {fp}")
     print(f"  False Negatives:   {fn}")
     print(f"  Accuracy:          {accuracy:.4f}")
+
+    # Log + grafik
+    save_eval_logs(distances, labels, threshold, tp, tn, fp, fn, model_path, data_dir)
 
 
 # ---------------------------------

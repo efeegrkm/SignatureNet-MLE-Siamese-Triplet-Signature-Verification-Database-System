@@ -17,7 +17,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 MODEL_PATH = (
     "C:/Users/efegr/OneDrive/Belgeler/PythonProjects/"
-    "SignatureAuthentication/SiameseModel/models/signature_siamese_best.pth"
+    "SignatureAuthentication/SiameseModel/models/signature_siamese_best_0.92Accuracy.pth"
 )
 
 THRESHOLD = 1.2
