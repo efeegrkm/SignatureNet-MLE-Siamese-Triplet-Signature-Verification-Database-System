@@ -100,7 +100,7 @@ body {
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
-/* ANA EKRANDAKİ ÜÇ BÜYÜK BUTON */
+/* ANA EKRANDAKİ BÜYÜK BUTONLAR */
 .stButton > button.big-btn-1 {
     width: 100%;
     background: linear-gradient(135deg,#ff3b3b,#ff9f1a);
@@ -116,6 +116,13 @@ body {
 .stButton > button.big-btn-3 {
     width: 100%;
     background: linear-gradient(135deg,#6c5ce7,#d63031);
+    color: white;
+}
+
+/* 4. feature için yeni renk */
+.stButton > button.big-btn-4 {
+    width: 100%;
+    background: linear-gradient(135deg,#00cec9,#0984e3);
     color: white;
 }
 
@@ -225,11 +232,9 @@ def load_users():
             return json.load(f)
     return []
 
-
 def save_users(users):
     with open(USERS_PATH, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
-
 
 def load_embeddings():
     """
@@ -261,10 +266,8 @@ def load_embeddings():
         return emb_db
     return {}
 
-
 def save_embeddings(emb_db):
     torch.save(emb_db, CFG["emb_path"])
-
 
 def load_model():
     # Modeli model_Triplet / model_Siamese şeklinde cache'liyoruz
@@ -288,7 +291,6 @@ def load_model():
     st.session_state[model_key] = model
     return model
 
-
 def get_embedding(img: Image.Image) -> torch.Tensor:
     """
     Aktif modele göre doğru preprocessing+transform'u uygula.
@@ -309,13 +311,11 @@ def get_embedding(img: Image.Image) -> torch.Tensor:
         emb = model(t)
     return emb.squeeze(0).cpu()
 
-
 def compute_min_distance(emb, emb_list):
     if not emb_list:
         return None
     dists = [torch.norm(emb - e).item() for e in emb_list]
     return min(dists)
-
 
 def get_or_create_user_id(users, name):
     for u in users:
@@ -325,22 +325,45 @@ def get_or_create_user_id(users, name):
     users.append({"user_id": new_id, "name": name})
     return new_id, users, True
 
+def clear_database_files():
+    """
+    Kullanıcı DB'sini sıfırlar:
+      - users.json
+      - embeddings_triplet.pt
+      - embeddings_siamese.pt
+    """
+    paths = [
+        USERS_PATH,
+        MODEL_CONFIG["Triplet"]["emb_path"],
+        MODEL_CONFIG["Siamese"]["emb_path"],
+    ]
+    for p in paths:
+        try:
+            p = Path(p)
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+
 # =====================================================
 # STATE
 # =====================================================
 if "mode" not in st.session_state:
     st.session_state["mode"] = None
 
+if "confirm_clear_db" not in st.session_state:
+    st.session_state["confirm_clear_db"] = False
+
 users = load_users()
 emb_db = load_embeddings()
 id2name = {u["user_id"]: u["name"] for u in users}
 
 # =====================================================
-# ANA EKRAN: 3 BÜYÜK BUTON
+# ANA EKRAN: 4 FEATURE + DB SIFIRLA
 # =====================================================
 if st.session_state["mode"] is None:
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         if st.button("🆕 Yeni Kullanıcı", key="btn_new", use_container_width=True):
@@ -354,17 +377,47 @@ if st.session_state["mode"] is None:
         if st.button("🔁 İki İmzayı Karşılaştır", key="btn_compare", use_container_width=True):
             st.session_state["mode"] = "compare"
 
-    # BUTONLARA RENK SINIFI EKLEYEN SCRIPT
+    with col4:
+        # YENİ: Tek imzadan kullanıcı bulma
+        if st.button("🔎 İmzadan Kullanıcı Bul", key="btn_identify", use_container_width=True):
+            st.session_state["mode"] = "identify"
+
+    # BUTONLARA RENK SINIFI EKLEYEN SCRIPT (ilk 4 butona)
     st.markdown("""
     <script>
     const btns = window.parent.document.querySelectorAll('.stButton button');
-    if (btns.length >= 3) {
+    if (btns.length >= 4) {
         btns[0].classList.add('big-btn-1');
         btns[1].classList.add('big-btn-2');
         btns[2].classList.add('big-btn-3');
+        btns[3].classList.add('big-btn-4');
     }
     </script>
     """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # YENİ: Database'i sıfırlama butonu (onaylı)
+    st.markdown("### 🗑️ Database Yönetimi")
+    if not st.session_state["confirm_clear_db"]:
+        if st.button("🗑️ Database Verilerini Sil (Sıfırla)", key="btn_clear_db", use_container_width=True):
+            st.session_state["confirm_clear_db"] = True
+    else:
+        st.warning("Bu işlem tüm kullanıcıları ve embedding kayıtlarını silecektir. Emin misin?")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("✅ Evet, hepsini sil", key="btn_clear_db_confirm", use_container_width=True):
+                clear_database_files()
+                st.session_state["confirm_clear_db"] = False
+                st.session_state["mode"] = None
+                # Sayfayı yenile
+                try:
+                    st.rerun()
+                except Exception:
+                    st.experimental_rerun()
+        with c2:
+            if st.button("❌ Vazgeç", key="btn_clear_db_cancel", use_container_width=True):
+                st.session_state["confirm_clear_db"] = False
 
 # =====================================================
 # YENİ KULLANICI EKRANI
@@ -490,6 +543,113 @@ elif st.session_state["mode"] == "existing":
                 st.session_state["mode"] = None
 
 # =====================================================
+# YENİ FEATURE: TEK İMZADAN KULLANICI BUL (MEAN EMBEDDING)
+# =====================================================
+elif st.session_state["mode"] == "identify":
+    st.subheader("🔎 İmzadan Kullanıcı Bul (Database Search)")
+
+    if not users:
+        st.warning("Hiç kullanıcı yok. Önce 'Yeni Kullanıcı' ile kayıt oluştur.")
+        if st.button("⬅️ Geri Dön", key="btn_back_identify_empty", use_container_width=True):
+            st.session_state["mode"] = None
+    else:
+        file = st.file_uploader(
+            "Kime ait olduğunu bulmak istediğin imza (tek resim):",
+            type=["jpg", "jpeg", "png"],
+            key="identify_file"
+        )
+
+        # Önizleme: Orijinal + modele giden görüntü (senin compare ekranındaki mantıkla)
+        if file:
+            st.markdown("#### 📷 Yüklenen İmzanın Önizlemesi")
+            img_orig = Image.open(file)
+            c1, c2 = st.columns(2)
+            with c1:
+                st.image(img_orig, caption="Orijinal", use_column_width=True)
+            with c2:
+                if ACTIVE_MODEL_NAME == "Siamese":
+                    img_proc = preprocess_for_siamese_preview(img_orig)
+                    st.image(img_proc, caption="Model Girişi (400×400)", use_column_width=True)
+                else:
+                    img_proc = preprocess_for_triplet_preview(img_orig)
+                    st.image(img_proc, caption="Model Girişi (128×224)", use_column_width=True)
+
+        threshold = st.slider(
+            "Eşik değer (mesafe)",
+            min_value=float(CFG["th_min"]),
+            max_value=float(CFG["th_max"]),
+            value=float(CFG["th_default"]),
+            step=0.01,
+            key="identify_threshold"
+        )
+
+        col_a, col_b = st.columns([2, 1])
+
+        with col_a:
+            if file and st.button("🔍 Kullanıcıyı Bul", key="btn_identify_run", use_container_width=True):
+                img = Image.open(file)
+                test_emb = get_embedding(img)
+
+                # Tüm kullanıcıların mean embedding'leri ile karşılaştır
+                candidates = []
+                changed = False
+
+                for uid, rec in emb_db.items():
+                    if not isinstance(rec, dict):
+                        continue
+
+                    mean_emb = rec.get("mean_embedding", None)
+                    if mean_emb is None:
+                        embs = rec.get("embeddings", [])
+                        if embs:
+                            try:
+                                mean_emb = torch.stack(embs).mean(dim=0)
+                                rec["mean_embedding"] = mean_emb
+                                emb_db[uid] = rec
+                                changed = True
+                            except Exception:
+                                continue
+
+                    if mean_emb is None:
+                        continue
+
+                    dist = torch.norm(test_emb - mean_emb).item()
+                    candidates.append((dist, uid))
+
+                if changed:
+                    save_embeddings(emb_db)
+
+                if not candidates:
+                    st.error("Database'de karşılaştırılabilir embedding kaydı bulunamadı.")
+                else:
+                    candidates.sort(key=lambda x: x[0])
+                    best_dist, best_uid = candidates[0]
+                    best_name = id2name.get(best_uid, best_uid)
+
+                    st.metric("En Yakın Mesafe", f"{best_dist:.3f}")
+
+                    if best_dist < threshold:
+                        st.success(f"✅ Bu imza muhtemelen **{best_name}** (ID: {best_uid}) kullanıcısına ait.")
+                    else:
+                        st.warning("⚠️ Bu imza hiçbir kullanıcıyla eşik altında eşleşmedi (No matching user).")
+
+                    # İstersen top-5 listeyi de göster (debug için faydalı)
+                    top_k = candidates[:5]
+                    rows = []
+                    for d, uid in top_k:
+                        rows.append({
+                            "User": id2name.get(uid, uid),
+                            "UserID": uid,
+                            "Distance": round(d, 4)
+                        })
+                    st.markdown("#### 🔝 En Yakın 5 Aday")
+                    st.dataframe(rows, use_container_width=True)
+
+        with col_b:
+            if st.button("⬅️ Geri Dön", key="btn_back_identify", use_container_width=True):
+                st.session_state["mode"] = None
+
+# =====================================================
 # İKİ İMZAYI KARŞILAŞTIRMA (DB'siz)
 # =====================================================
 elif st.session_state["mode"] == "compare":
@@ -576,11 +736,12 @@ st.markdown("""
 <script>
 const btns = window.parent.document.querySelectorAll('.stButton button');
 
-// Ana ekrandaki 3 büyük buton dışındakilere small-btn ver
+// Ana ekrandaki büyük butonlar haricindekilere small-btn ver
 btns.forEach((b, idx) => {
   if (!b.classList.contains('big-btn-1') &&
       !b.classList.contains('big-btn-2') &&
-      !b.classList.contains('big-btn-3')) {
+      !b.classList.contains('big-btn-3') &&
+      !b.classList.contains('big-btn-4')) {
     b.classList.add('small-btn');
   }
 });
