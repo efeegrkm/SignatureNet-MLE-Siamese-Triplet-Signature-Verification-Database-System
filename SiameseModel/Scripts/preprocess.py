@@ -20,10 +20,9 @@ def preprocess_image(path: str) -> torch.Tensor:
     """
     img = Image.open(path).convert("L")
 
-    # İstersen bunu kapatabilirsin, ama genelde iş görüyor:
     img = ImageOps.autocontrast(img)
 
-    # Oranı bozulmadan gerekirse küçült (genişlik veya yükseklik 400'ü geçmeyecek)
+    # Oranı bozulmadan küçült (genişlik veya yükseklik 400'ü geçmeyecek)
     img.thumbnail(TARGET_SIZE, Image.LANCZOS)
 
     # 400x400 beyaz canvas

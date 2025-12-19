@@ -91,7 +91,6 @@ def train():
 
             running_loss += loss.item()
 
-            # Diagnostik mesafeler
             with torch.no_grad():
                 pos_dist = F.pairwise_distance(emb_anchor, emb_positive).mean()
                 neg_dist = F.pairwise_distance(emb_anchor, emb_negative).mean()

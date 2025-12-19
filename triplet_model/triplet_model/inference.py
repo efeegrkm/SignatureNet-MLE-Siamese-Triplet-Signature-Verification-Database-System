@@ -17,7 +17,7 @@ def load_model(model_path):
     if os.path.exists(model_path):
         # map_location='cpu' -> Eğer GPU'da eğitip CPU'da test ediyorsan hata almamak için
         model.load_state_dict(torch.load(model_path, map_location=device))
-        model.eval() # Modeli test moduna al (Dropout'u kapatır)
+        model.eval()
         print(f"Model yüklendi: {model_path}")
         return model, device
     else:
@@ -30,7 +30,7 @@ def preprocess_image(image_path):
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Resim bulunamadı: {image_path}")
 
-    # Eğitimdeki dönüşümlerin aynısı (Augmentation olmadan!)
+    # Eğitimdeki dönüşümlerin aynısı 
     transform = transforms.Compose([
         transforms.Resize((128, 224)),
         transforms.ToTensor(),
@@ -49,23 +49,22 @@ def compare_signatures(model, device, img1_path, img2_path, threshold=0.90):
         img1 = preprocess_image(img1_path).to(device)
         img2 = preprocess_image(img2_path).to(device)
 
-        with torch.no_grad(): # Gradyan hesaplamaya gerek yok
+        with torch.no_grad(): 
             emb1 = model(img1)
             emb2 = model(img2)
             
-            # İki vektör arasındaki Öklid mesafesi
             distance = F.pairwise_distance(emb1, emb2).item()
             
-        print(f"\n🔍 Karşılaştırma:")
+        print(f"\n Karşılaştırma:")
         print(f"   Resim 1: {os.path.basename(img1_path)}")
         print(f"   Resim 2: {os.path.basename(img2_path)}")
         print(f"   Mesafe: {distance:.4f}")
         print(f"   Eşik (Threshold): {threshold}")
         
         if distance < threshold:
-            print("   ✅ SONUÇ: AYNI KİŞİ (Gerçek İmza)")
+            print("   SONUÇ: AYNI KİŞİ (Gerçek İmza)")
         else:
-            print("   ❌ SONUÇ: FARKLI KİŞİ (Sahte İmza)")
+            print("   SONUÇ: FARKLI KİŞİ (Sahte İmza)")
             
     except FileNotFoundError as e:
         print(f"   HATA: {e}")
@@ -78,8 +77,6 @@ if __name__ == "__main__":
         model, device = load_model(model_path)
         
         # 2. TEST SENARYOLARI
-        # Not: Bu dosya yollarının senin bilgisayarında var olduğundan emin ol.
-        # sign_data/split/test/049/01_049.png gibi...
         
         print("\n--- Test 1: Gerçek vs Gerçek (Aynı Kişi - 049) ---")
         img1 = 'sign_data/split/test/049/01_049.png' 
@@ -91,8 +88,6 @@ if __name__ == "__main__":
         img3 = 'sign_data/split/test/049_forg/01_0114049.png' 
         compare_signatures(model, device, img1, img3, threshold=0.90)
         
-        # İstersen başka bir kullanıcı için de ekle (Örn: 050)
-        # print("\n--- Test 3: Başka Kullanıcı ---")
         
     except Exception as e:
         print(f"\nGenel Hata: {e}")

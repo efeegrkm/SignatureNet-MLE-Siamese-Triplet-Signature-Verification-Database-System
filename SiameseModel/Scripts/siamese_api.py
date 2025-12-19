@@ -98,7 +98,7 @@ def compare_signatures(
 
 
 if __name__ == "__main__":
-    # Küçük bir manuel test örneği (yolları kendine göre değiştir)
+    # Küçük bir manuel test örneği
     result = compare_signatures(
         "../sign_data/split/test/049/01_049.png",
         "../sign_data/split/test/049/02_049.png",

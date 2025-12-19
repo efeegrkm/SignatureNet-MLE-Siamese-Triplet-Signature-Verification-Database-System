@@ -31,7 +31,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from model import SignatureNet
-from preprocess import preprocess_image   # 🔥 Preprocess pipeline
+from preprocess import preprocess_image   # Preprocess pipeline
 
 
 # ---------------------------------
@@ -193,7 +193,6 @@ def save_eval_logs(
         "num_distances": len(distances),
     }
 
-    # Ham veriyi de ekleyelim (çok büyük değilse)
     log["distances"] = distances
     log["labels"] = labels
 

@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 from torch.utils.data import Dataset
 
-from preprocess import preprocess_image   # <-- en kritik satır
+from preprocess import preprocess_image  
 
 
 class SignatureSiameseDataset(Dataset):

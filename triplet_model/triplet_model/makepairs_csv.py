@@ -6,7 +6,6 @@ from itertools import combinations
 
 # ====== AYARLAR ======
 # Bu dosyanın yeri: .../DB-based-signature-verification/triplet_model/triplet_model/makepairs_csv.py
-# Bizim referans noktamız (PROJECT_ROOT) ana klasör olmalı.
 
 # __file__ -> makepairs_csv.py
 # parents[0] -> triplet_model (içteki)
@@ -15,8 +14,6 @@ from itertools import combinations
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Veri setinin olduğu yer. 
-# Eğer yapın: DB.../triplet_model/sign_data şeklindeyse:
 DATA_ROOT_DIR = PROJECT_ROOT / "triplet_model"
 
 SPLIT_ROOT = DATA_ROOT_DIR / "sign_data" / "split"
@@ -44,7 +41,7 @@ def build_pairs_for_split(split_dir: Path):
     all_pairs = []
     
     if not split_dir.exists():
-        print(f"⚠️ HATA: Klasör bulunamadı -> {split_dir}")
+        print(f"HATA: Klasör bulunamadı -> {split_dir}")
         return []
 
     # _forg olmayan klasörleri (kişileri) bul
@@ -53,7 +50,7 @@ def build_pairs_for_split(split_dir: Path):
         if d.is_dir() and not d.name.endswith("_forg")
     )
 
-    print(f"📂 {split_dir.name} klasöründe {len(person_ids)} kişi bulundu.")
+    print(f"{split_dir.name} klasöründe {len(person_ids)} kişi bulundu.")
 
     for pid in person_ids:
         real_dir = split_dir / pid
@@ -82,19 +79,19 @@ def build_pairs_for_split(split_dir: Path):
                 all_pairs.append((p1, p2, 0)) # 0 = Farklı/Sahte
 
     random.shuffle(all_pairs)
-    print(f"✅ {split_dir.name} için toplam {len(all_pairs)} çift oluşturuldu.")
+    print(f"{split_dir.name} için toplam {len(all_pairs)} çift oluşturuldu.")
     return all_pairs
 
 def write_csv(pairs, csv_path: Path):
     if not pairs:
-        print(f"⚠️ Uyarı: Kaydedilecek çift yok -> {csv_path}")
+        print(f"Uyarı: Kaydedilecek çift yok -> {csv_path}")
         return
 
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerows(pairs)
-    print(f"💾 CSV Kaydedildi: {csv_path}")
+    print(f"CSV Kaydedildi: {csv_path}")
 
 # ==========================================
 # İŞTE EKSİK OLAN KISIM: KODU ÇALIŞTIRMA

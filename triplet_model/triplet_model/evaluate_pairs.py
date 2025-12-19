@@ -37,7 +37,7 @@ MODEL_PATH = DATA_ROOT_DIR / "triplet_model" / "models" / "signature_cnn_augment
 # ======================================================
 def get_transform():
     return transforms.Compose([
-        transforms.Resize((128, 224)),       # sabit resize — eski başarılı pipeline
+        transforms.Resize((128, 224)),       
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -53,7 +53,7 @@ class SignaturePairCSVDataset(Dataset):
         self.pairs = []
 
         if not os.path.exists(csv_path):
-            print(f"⚠️ CSV Yok: {csv_path}")
+            print(f"CSV Yok: {csv_path}")
             return
 
         with open(csv_path, "r", newline="", encoding="utf-8") as f:
@@ -87,14 +87,14 @@ def load_model_instance(model_path):
     model = SignatureNet().to(device)
 
     if not os.path.exists(model_path):
-        print(f"❌ Model yok: {model_path}")
+        print(f"Model yok: {model_path}")
         return None, device
 
     state = torch.load(model_path, map_location=device)
     model.load_state_dict(state)
     model.eval()
 
-    print(f"✅ Model yüklendi: {model_path}")
+    print(f"Model yüklendi: {model_path}")
     return model, device
 
 
@@ -143,7 +143,6 @@ def eval_with_confusion(model, dataloader, device, threshold, name="SET"):
 def plot_distance_table(pos, neg, save_path, set_name="TEST"):
     plt.figure(figsize=(10, 5))
 
-    # Görsel olarak daha düzgün olsun diye sırala
     pos_sorted = np.sort(pos)
     neg_sorted = np.sort(neg)
 
@@ -177,13 +176,12 @@ def plot_distance_table(pos, neg, save_path, set_name="TEST"):
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-    print(f"📊 Distance–Distance Separation Chart kaydedildi:\n{save_path}")
+    print(f"Distance–Distance Separation Chart kaydedildi:\n{save_path}")
 
 def plot_pr_curve(all_dists, all_labels, save_path, title="Precision–Recall Curve (Triplet Model)"):
     all_dists = np.array(all_dists)
     all_labels = np.array(all_labels)
 
-    # Mesafe küçükse "pozitif" (aynı kişi) -> skor olarak -distance kullanıyoruz
     scores = -all_dists
 
     precision, recall, _ = precision_recall_curve(all_labels, scores, pos_label=1)
@@ -201,7 +199,7 @@ def plot_pr_curve(all_dists, all_labels, save_path, title="Precision–Recall Cu
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-    print(f"📈 PR grafiği kaydedildi:\n{save_path}")
+    print(f"PR grafiği kaydedildi:\n{save_path}")
 
 # ======================================================
 # DISTANCE STATISTICS
@@ -267,9 +265,6 @@ def plot_roc_curve(all_dists, all_labels, save_path, title="ROC Curve (Triplet M
     all_dists = np.array(all_dists)
     all_labels = np.array(all_labels)
 
-    # Bizde MESAFE küçükse "aynı kişi" demek.
-    # ROC için "büyüdükçe daha pozitif" bir skor lazım.
-    # Bu yüzden skoru = -distance alıyoruz.
     scores = -all_dists
 
     fpr, tpr, _ = roc_curve(all_labels, scores, pos_label=1)
@@ -288,7 +283,7 @@ def plot_roc_curve(all_dists, all_labels, save_path, title="ROC Curve (Triplet M
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-    print(f"📈 ROC grafiği kaydedildi:\n{save_path}")
+    print(f"ROC grafiği kaydedildi:\n{save_path}")
 
 # ======================================================
 # EN İYİ THRESHOLD HESAPLAMA
@@ -340,8 +335,8 @@ if __name__ == "__main__":
     print("\n--- VALIDATION ANALİZİ ---")
     best_acc, best_th, all_dist_val, all_label_val = find_best_threshold(model, val_loader, device)
 
-    print(f"📌 En iyi eşik: {best_th:.2f}")
-    print(f"📌 Max Val Accuracy: %{best_acc:.2f}")
+    print(f"En iyi eşik: {best_th:.2f}")
+    print(f"Max Val Accuracy: %{best_acc:.2f}")
 
     # Confusion + stats + grafik (VAL)
     all_dists, all_labels, _ = eval_with_confusion(model, val_loader, device, best_th, name="VAL")

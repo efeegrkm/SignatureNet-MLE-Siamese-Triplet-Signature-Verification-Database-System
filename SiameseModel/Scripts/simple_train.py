@@ -103,7 +103,7 @@ def train_siamese(
         if avg < best_loss:
             best_loss = avg
             torch.save(model.state_dict(), best_path)
-            print(f"🔥 Best model updated at epoch {epoch+1} - loss {avg:.4f}")
+            print(f"Best model updated at epoch {epoch+1} - loss {avg:.4f}")
 
     # Save final model
     torch.save(model.state_dict(), last_path)

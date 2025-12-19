@@ -19,7 +19,7 @@ def preprocess(image_path):
     img = Image.open(image_path).convert("L")
 
     transform = transforms.Compose([
-        transforms.Resize((128, 224)),          # ❗ sabit resize (aspect ratio yok)
+        transforms.Resize((128, 224)),          # sabit resize (aspect ratio yok)
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -28,8 +28,7 @@ def preprocess(image_path):
 
 
 def test_my_signatures():
-    THRESHOLD = 0.10   # eski modelde bulunan doğru threshold
-
+    THRESHOLD = 0.10   
     model_path = "triplet_model/triplet_model/models/signature_cnn_augmented.pth"
     img1_path = "triplet_model/deneme/e1.jpg"
     img2_path = "triplet_model/deneme/e2.jpg"

@@ -48,7 +48,7 @@ def evaluate_accuracy():
     
     tp = 0 # True Positive (Gerçeği bildi)
     tn = 0 # True Negative (Sahteyi bildi)
-    fp = 0 # False Positive (Sahteye gerçek dedi - TEHLİKELİ)
+    fp = 0 # False Positive (Sahteye gerçek dedi)
     fn = 0 # False Negative (Gerçeğe sahte dedi)
 
     users = [d for d in os.listdir(TEST_DIR) if not d.endswith('_forg')]
@@ -84,7 +84,7 @@ def evaluate_accuracy():
                 correct_preds += 1
                 tp += 1
             else:
-                fn += 1 # Hata: Gerçeğe sahte dedi
+                fn += 1 
 
         # 2. NEGATİF TESTLER (Gerçek vs Sahte)
         for forg_img_path in forg_imgs:
@@ -98,20 +98,20 @@ def evaluate_accuracy():
                 correct_preds += 1
                 tn += 1
             else:
-                fp += 1 # Hata: Sahteye gerçek dedi
+                fp += 1 
 
     # SONUÇLARI YAZDIR
     accuracy = 100 * correct_preds / total_preds
     
     print("-" * 30)
-    print(f"📊 TOPLAM TEST SAYISI: {total_preds}")
-    print(f"✅ DOĞRU TAHMİN: {correct_preds}")
-    print(f"🏆 GENEL BAŞARI (ACCURACY): %{accuracy:.2f}")
+    print(f"TOPLAM TEST SAYISI: {total_preds}")
+    print(f"DOĞRU TAHMİN: {correct_preds}")
+    print(f"GENEL BAŞARI (ACCURACY): %{accuracy:.2f}")
     print("-" * 30)
     print("Detaylar:")
     print(f"   Doğru Kabul (True Positive): {tp}")
     print(f"   Doğru Red (True Negative): {tn}")
-    print(f"   Yanlış Kabul (False Positive): {fp} (En Kritik Hata)")
+    print(f"   Yanlış Kabul (False Positive): {fp}")
     print(f"   Yanlış Red (False Negative): {fn}")
 
 if __name__ == "__main__":
