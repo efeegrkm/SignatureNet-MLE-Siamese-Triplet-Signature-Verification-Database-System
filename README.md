@@ -2,12 +2,12 @@
 
 # Direct link to modals: https://drive.google.com/drive/folders/1LX6RKq7uMcwOhMbTLXyJD8Ep2e2FRMjF?usp=sharing
 
-# 🖋️ SignatureNetDB  
+#  SignatureNetDB  
 ### Deep-Learning Based Signature Verification with Siamese & Triplet Networks + Identity Database
 
 ---
 
-## 📌 Overview
+##  Overview
 **SignatureNetDB** is a full end-to-end signature verification system combining deep learning, preprocessing, and a structured user database.
 
 This project allows:
@@ -22,14 +22,14 @@ This project allows:
 
 ---
 
-## 🧠 Deep Learning Models
+##  Deep Learning Models
 
-### ✔️ Siamese Network
+###  Siamese Network
 - Contrastive Loss  
 - Learns pairwise similarity  
 - Best threshold found during evaluation: `~1.21` (for 0.92 accuracy siamese modal)
 
-### ✔️ Triplet Network
+###  Triplet Network
 - Triplet Loss (Anchor-Positive-Negative)
 - Learns better separation in embedding space  
 - More robust for unseen signatures
@@ -41,7 +41,7 @@ Output embedding : 128-dimensional L2-normalized vector
 
 ---
 
-## 🖼️ Preprocessing Pipeline (400×400)
+##  Preprocessing Pipeline (400×400)
 Every signature image passes through:
 
 1. Convert to grayscale  
@@ -57,7 +57,7 @@ The preprocessing is identical across:
 
 ---
 
-## 🏋️ Training
+##  Training
 Training scripts include:
 - Hard-negative sampling  
 - On-the-fly data augmentation:
@@ -78,7 +78,7 @@ Final best loss: ~0.13
 
 ---
 
-## 📊 Evaluation
+##  Evaluation
 `siamese_evaluate.py` computes:
 
 - All distances (genuine vs forgery)
@@ -94,7 +94,7 @@ Final best loss: ~0.13
 
 ---
 
-## 🗄️ Database System
+##  Database System
 
 Each registered user has:
 
@@ -116,29 +116,29 @@ Each registered user has:
 - Discarded due to dramatic increase in FP rate.
 ---
 
-## 🔍 Supported Database Queries
+##  Supported Database Queries
 
-### ✔️ 1) “Does this signature belong to user NO=X?”
+###  1) “Does this signature belong to user NO=X?”
 - Compute embedding  
 - Compare with stored user embedding  
 - Apply threshold  
 - Return **Genuine / Forgery**  
 
-### ✔️ 2) “Give me NO from Name+Surname”
+###  2) “Give me NO from Name+Surname”
 Simple lookup in the database.
 
-### ✔️ 3) “Whose signature is this?”
+###  3) “Whose signature is this?”
 - Compute embedding  
 - Compare against **all stored embeddings**  
 - Return the best match (if below threshold)
 
-### ✔️ 4) “Verify two PNG signatures”
+###  4) “Verify two PNG signatures”
 - Pure model-based matching  
 - No database math needed  
 
 ---
 
-## 🖥️ GUI Application
+##  GUI Application
 
 The desktop GUI includes:
 
@@ -155,7 +155,7 @@ GUI internally:
 - Outputs similarity score  
 
 ---
-## 🤝 Contributors
+##  Contributors
 **Efe Görkem Akkanat** — Siamese Modal, GUI, Database Management.
 
 **Şeyda Yağmur Asal** — Triplet Modal, GUI, Database Management.
