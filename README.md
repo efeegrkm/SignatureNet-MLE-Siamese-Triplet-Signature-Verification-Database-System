@@ -158,4 +158,4 @@ GUI internally:
 ##  Contributors
 **Efe Görkem Akkanat** — Siamese Modal, GUI, Database Management.
 
-**Şeyda Yağmur Asal** — Triplet Modal, GUI, Database Management.
+**Şevda Yağmur Asal** — Triplet Modal, GUI, Database Management.
